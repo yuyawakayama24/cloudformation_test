@@ -1,0 +1,132 @@
+#固定のテンプレート形式名。
+AWSTemplateFormatVersion: '2010-09-09'
+
+#スタックで各リソースを指定。
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.147.224.0/22
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: VPC_test
+
+  FlowLog:
+    Type: AWS::EC2::FlowLog
+    Properties:
+      LogDestination: !Ref LogGroup
+      LogDestinationType: cloud-watch-logs
+      DeliverLogsPermissionArn: !!Ref IAMRole
+      TrafficType: ALL
+      ResourceId: !!Ref VPC
+      ResourceType: VPC
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: LogGroup_test
+
+
+  NetworkAcl:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId: !!Ref VPC
+      Tags:
+        - Key: Name
+          Value: NetworkAcl_test
+  NetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: 0.0.0.0/0
+      Egress: false
+      NetworkAclId: !!Ref NetworkAcl
+      Protocol: -1
+      RuleAction: Allow
+      RuleNumber: 1
+  SubnetNetworkAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId: !!Ref Subnet1
+      NetworkAclId: !!Ref NetworkAcl
+
+
+  IAMUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: test
+      LoginProfile:
+        Password: test
+        PasswordResetRequired: true
+      Policies: !!Ref IAMPolicy
+
+  IAMGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: IAMGroup_test
+      Policies: !!Ref IAMPolicy
+
+  IAMPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Groups: !!Ref IAMGroup
+      PolicyName: IAMPolicy_test
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'Logs:CreateLogGroup'
+              - 'Logs:DescribeLogGroups'
+            Resource: '*'
+      Roles: !!Ref IAMRole
+      Users: !!Ref IAMUser
+
+  IAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: IAMRole_test
+      #どのリソースにRoleを割り当てるか
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - 'vpc-flow-logs.amazonaws.com'
+            Action:
+              - 'sts:AssumeRole'
+
+  Subnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.147.224.0/24
+      AvailabilityZone: ap-northeast-1a
+      VpcId: !!Ref VPC
+      Tags:
+        - Key: Name
+          Value: private-001
+  Subnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.147.225.0/24
+      AvailabilityZone: ap-northeast-1c
+      VpcId: !!Ref VPC
+      Tags:
+        - Key: Name
+          Value: private-002
+
+  Internetgateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: Internetgateway_test
+  GatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !!Ref Internetgateway
+      VpcId: !!Ref VPC
+
