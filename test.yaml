@@ -46,10 +46,15 @@ Resources:
       Protocol: -1
       RuleAction: Allow
       RuleNumber: 1
-  SubnetNetworkAclAssociation:
+  SubnetNetworkAclAssociation1:
     Type: AWS::EC2::SubnetNetworkAclAssociation
     Properties:
       SubnetId: !!Ref Subnet1
+      NetworkAclId: !!Ref NetworkAcl
+  SubnetNetworkAclAssociation2:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId: !!Ref Subnet2
       NetworkAclId: !!Ref NetworkAcl
 
 
